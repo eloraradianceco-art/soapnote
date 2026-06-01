@@ -889,7 +889,7 @@ async function extractPedHistory() {
       body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 900, messages: [{ role:'user', content: prompt }] })
     })
     var data = await res.json()
-    if (data.error) throw new Error(data.error.message)
+    if (data.error) throw new Error(data.error.message + ' (type: ' + data.error.type + ')')
     var raw = (data.content||[]).map(function(b){ return b.text||'' }).join('').replace(/```json|```/g,'').trim()
     var ex = JSON.parse(raw)
     var fields = [
@@ -1106,7 +1106,7 @@ Be concise, professional, clinically precise. Return ONLY the JSON object, no ma
       body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1200, messages: [{ role:'user', content: prompt }] })
     })
     const data = await res.json()
-    if (data.error) throw new Error(data.error.message)
+    if (data.error) throw new Error(data.error.message + ' (type: ' + data.error.type + ')')
     const raw  = (data.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim()
     const soap = JSON.parse(raw)
     document.getElementById('soap-s').value = soap.subjective || ''
@@ -1114,8 +1114,12 @@ Be concise, professional, clinically precise. Return ONLY the JSON object, no ma
     document.getElementById('soap-a').value = soap.assessment || ''
     document.getElementById('soap-p').value = soap.plan       || ''
   } catch(err) {
-    ['soap-s','soap-o','soap-a','soap-p'].forEach(id=>document.getElementById(id).value='(Generation error — check your API key in Settings, or type directly)')
-    console.error(err)
+    var errMsg = err && err.message ? err.message : String(err)
+    document.getElementById('soap-s').value = 'Generation failed: ' + errMsg
+    document.getElementById('soap-o').value = 'Check: 1) API key is correct in Settings  2) You have credit at console.anthropic.com/billing  3) Internet connection is active'
+    document.getElementById('soap-a').value = ''
+    document.getElementById('soap-p').value = ''
+    console.error('SOAP generation error:', err)
   }
   document.getElementById('loading-bar').style.display = 'none'
   btn.disabled = false; btn.textContent = 'Regenerate SOAP Note'
@@ -1563,7 +1567,7 @@ async function extractHistory() {
       body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 800, messages: [{ role:'user', content: prompt }] })
     })
     var data = await res.json()
-    if (data.error) throw new Error(data.error.message)
+    if (data.error) throw new Error(data.error.message + ' (type: ' + data.error.type + ')')
     var raw = (data.content||[]).map(function(b){ return b.text||'' }).join('').replace(/```json|```/g,'').trim()
     var extracted = JSON.parse(raw)
     var fields = [
