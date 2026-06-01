@@ -577,6 +577,17 @@ textarea.fi{resize:vertical;line-height:1.55;min-height:78px}
 
 <div id="toast"></div>
 
+<div id="settings-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.5);align-items:flex-end;justify-content:center">
+  <div style="background:var(--surf);border-radius:var(--r) var(--r) 0 0;padding:1.5rem;width:100%;max-width:600px;padding-bottom:calc(1.5rem + env(safe-area-inset-bottom,0))">
+    <div style="font-size:17px;font-weight:700;margin-bottom:1.25rem" id="modal-title">Update</div>
+    <div id="modal-body"></div>
+    <div style="display:flex;gap:8px;margin-top:1rem">
+      <button onclick="closeModal()" style="flex:1;padding:13px;background:transparent;border:1px solid var(--bdr);border-radius:var(--rs);font-size:15px;cursor:pointer;font-family:inherit">Cancel</button>
+      <button onclick="modalConfirm()" style="flex:2;padding:13px;background:var(--teal);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">Save</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── STORAGE ──────────────────────────────────────────────
 const S = {
@@ -659,6 +670,7 @@ function launchApp() {
   populateClientSelect()
   updatePinStatus()
   if (!SpeechRec) document.getElementById('no-mic').style.display = 'block'
+  document.getElementById('settings-modal').addEventListener('click', function(e){ if(e.target===this) closeModal() })
 }
 
 // ── NAV ───────────────────────────────────────────────────
@@ -1427,17 +1439,33 @@ function updatePinStatus() {
 }
 
 function changeApiKey() {
-  const k = prompt('Enter new Anthropic API key:', '')
-  if (k && k.trim()) { S.set(KEY_API, k.trim()); showToast('API key updated') }
+  openModal('Update API Key',
+    '<label style="font-size:12px;font-weight:600;color:var(--txt2);display:block;margin-bottom:6px">Anthropic API Key</label>' +
+    '<input id="modal-input" type="password" class="fi" placeholder="sk-ant-..." autocomplete="off" autocorrect="off" spellcheck="false" style="width:100%;font-size:15px" />' +
+    '<p style="font-size:12px;color:var(--txt3);margin-top:8px">Get your key at console.anthropic.com</p>',
+    function() {
+      var k = document.getElementById('modal-input').value.trim()
+      if (!k) { showToast('Please enter a valid API key'); return false }
+      S.set(KEY_API, k); showToast('API key saved!'); return true
+    }
+  )
+  setTimeout(function(){ var el=document.getElementById('modal-input'); if(el) el.focus() }, 250)
 }
 
 function changePIN() {
-  const action = S.get(KEY_PIN) ? 'change or remove' : 'set'
-  const p = prompt(`Enter new 4-digit PIN (leave blank to ${S.get(KEY_PIN)?'remove':'skip'}):`, '')
-  if (p === null) return
-  if (p === '') { S.del(KEY_PIN); showToast('PIN removed'); updatePinStatus(); return }
-  if (!/^\d{4}$/.test(p)) { alert('PIN must be exactly 4 digits.'); return }
-  S.set(KEY_PIN, p); showToast('PIN updated'); updatePinStatus()
+  var hasPin = !!S.get(KEY_PIN)
+  openModal(hasPin ? 'Change or Remove PIN' : 'Set a PIN',
+    '<label style="font-size:12px;font-weight:600;color:var(--txt2);display:block;margin-bottom:6px">New 4-digit PIN</label>' +
+    '<input id="modal-input" type="password" inputmode="numeric" maxlength="4" class="fi" placeholder="Leave blank to remove PIN" style="width:100%;letter-spacing:.25em;font-size:22px;text-align:center" />' +
+    '<p style="font-size:12px;color:var(--txt3);margin-top:8px">Leave blank and tap Save to remove the PIN lock.</p>',
+    function() {
+      var p = document.getElementById('modal-input').value.trim()
+      if (p === '') { S.del(KEY_PIN); showToast('PIN removed'); updatePinStatus(); return true }
+      if (!/^\d{4}$/.test(p)) { showToast('PIN must be exactly 4 digits'); return false }
+      S.set(KEY_PIN, p); showToast('PIN updated'); updatePinStatus(); return true
+    }
+  )
+  setTimeout(function(){ var el=document.getElementById('modal-input'); if(el) el.focus() }, 250)
 }
 
 function exportData() {
@@ -1563,6 +1591,23 @@ async function extractHistory() {
 }
 
 // ── TOAST ─────────────────────────────────────────────────
+var _modalConfirmFn = null
+function openModal(title, bodyHtml, onConfirm) {
+  document.getElementById('modal-title').textContent = title
+  document.getElementById('modal-body').innerHTML = bodyHtml
+  _modalConfirmFn = onConfirm
+  document.getElementById('settings-modal').style.display = 'flex'
+  document.body.style.overflow = 'hidden'
+}
+function closeModal() {
+  document.getElementById('settings-modal').style.display = 'none'
+  document.body.style.overflow = ''
+  _modalConfirmFn = null
+}
+function modalConfirm() {
+  if (_modalConfirmFn && _modalConfirmFn() !== false) closeModal()
+}
+
 function showToast(msg) {
   const t = document.getElementById('toast')
   t.textContent = msg; t.classList.add('show')
