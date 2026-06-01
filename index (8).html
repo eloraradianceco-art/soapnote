@@ -1,0 +1,1573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TB SOAP">
+<title>True Balance — SOAP Notes</title>
+<style>
+:root{--teal:#1D9E75;--teal-dk:#0F6E56;--teal-lt:#E1F5EE;--navy:#0D2137;--red:#E24B4A;--amber:#EF9F27;--bg:#F4F4F2;--surf:#FFFFFF;--bdr:rgba(0,0,0,0.09);--txt:#1A1A1A;--txt2:#5C5C5C;--txt3:#9A9A9A;--r:14px;--rs:9px;--nh:60px;--hh:54px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif;background:var(--bg);color:var(--txt);font-size:16px;-webkit-font-smoothing:antialiased}
+body{overflow-x:hidden}
+
+/* ── SETUP / PIN ── */
+.lock-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;background:var(--navy)}
+.lock-screen.hidden{display:none}
+.brand-mark{width:68px;height:68px;border-radius:18px;background:var(--teal);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;letter-spacing:-1px;margin-bottom:1.25rem}
+.lock-screen h1{color:#fff;font-size:22px;font-weight:700;margin-bottom:.5rem;text-align:center}
+.lock-screen .sub{color:rgba(255,255,255,.5);font-size:14px;text-align:center;line-height:1.6;margin-bottom:2rem;max-width:300px}
+.glass-card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:var(--r);padding:1.5rem;width:100%;max-width:360px}
+.glass-card label{display:block;font-size:11px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.glass-card input{width:100%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:var(--rs);padding:13px 14px;font-size:15px;color:#fff;outline:none;margin-bottom:1rem;font-family:inherit}
+.glass-card input::placeholder{color:rgba(255,255,255,.3)}
+.glass-card input:focus{border-color:var(--teal)}
+.btn-full{width:100%;background:var(--teal);color:#fff;border:none;border-radius:var(--rs);padding:15px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.01em;transition:background .15s}
+.btn-full:active{background:var(--teal-dk);transform:scale(.99)}
+.skip-link{color:rgba(255,255,255,.35);font-size:13px;text-align:center;margin-top:1rem;cursor:pointer;text-decoration:underline}
+.key-note{color:rgba(255,255,255,.35);font-size:12px;text-align:center;margin-top:.75rem;line-height:1.5}
+
+/* PIN pad */
+.pin-dots{display:flex;gap:14px;justify-content:center;margin:1.25rem 0}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.3);transition:all .12s}
+.pin-dot.filled{background:var(--teal);border-color:var(--teal)}
+.pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:280px;margin:0 auto}
+.pin-key{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:var(--r);padding:18px 10px;font-size:24px;font-weight:400;color:#fff;cursor:pointer;text-align:center;user-select:none;transition:all .1s;font-family:inherit}
+.pin-key:active{background:rgba(255,255,255,.22);transform:scale(.94)}
+.pin-err{color:#F09595;font-size:13px;text-align:center;margin-top:10px;min-height:20px}
+.pin-sub{color:rgba(255,255,255,.4);font-size:13px;text-align:center;margin-top:1.25rem;cursor:pointer}
+
+/* ── APP SHELL ── */
+#app{display:none;flex-direction:column;min-height:100vh}
+#app.active{display:flex}
+.app-bar{position:fixed;top:0;left:0;right:0;height:var(--hh);background:var(--surf);border-bottom:1px solid var(--bdr);display:flex;align-items:center;padding:0 1rem;z-index:200;gap:10px}
+.app-bar-logo{width:32px;height:32px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;letter-spacing:-.5px}
+.app-bar-title{font-size:16px;font-weight:700;color:var(--txt);flex:1}
+.app-bar-btn{font-size:14px;color:var(--teal);font-weight:600;cursor:pointer;padding:6px 4px;background:none;border:none;font-family:inherit}
+.scroll-area{margin-top:var(--hh);margin-bottom:var(--nh);overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:calc(100vh - var(--hh) - var(--nh))}
+.page{display:none;padding:1rem}
+.page.active{display:block}
+.bot-nav{position:fixed;bottom:0;left:0;right:0;height:var(--nh);background:var(--surf);border-top:1px solid var(--bdr);display:flex;align-items:stretch;z-index:200;padding-bottom:env(safe-area-inset-bottom,0)}
+.nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--txt3);border:none;background:none;font-family:inherit;padding:6px 0;transition:color .15s}
+.nav-tab.active{color:var(--teal)}
+.nav-ico{font-size:22px;line-height:1}
+.nav-lbl{font-size:10px;font-weight:600;letter-spacing:.03em}
+
+/* ── CARDS & FORMS ── */
+.card{background:var(--surf);border-radius:var(--r);border:1px solid var(--bdr);padding:1rem;margin-bottom:.75rem}
+.card-hd{font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between}
+.card-hd-action{font-size:12px;color:var(--teal);font-weight:600;cursor:pointer;text-transform:none;letter-spacing:0}
+.field{margin-bottom:.75rem}
+.field:last-child{margin-bottom:0}
+.field > label{display:block;font-size:12px;color:var(--txt2);font-weight:600;margin-bottom:5px}
+.fi{width:100%;background:var(--bg);border:1px solid var(--bdr);border-radius:var(--rs);padding:11px 12px;font-size:15px;color:var(--txt);font-family:inherit;outline:none;-webkit-appearance:none;appearance:none}
+select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+textarea.fi{resize:vertical;line-height:1.55;min-height:78px}
+.fi:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(29,158,117,.1);outline:none}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+
+/* Stars */
+.star-row{display:flex;gap:4px;align-items:center;padding:4px 0}
+.star{font-size:30px;color:#D8D8D8;cursor:pointer;line-height:1;transition:color .1s}
+.star.lit{color:var(--amber)}
+.star-lbl{font-size:13px;color:var(--txt2);margin-left:6px}
+
+/* Client selector */
+.csel-row{display:flex;gap:8px;align-items:flex-end}
+.csel-row .field{flex:1;margin:0}
+.btn-add-client{flex-shrink:0;background:var(--teal-lt);color:var(--teal-dk);border:none;border-radius:var(--rs);padding:11px 14px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit}
+.btn-add-client:active{background:#C1EBD9}
+
+/* Previous sessions callout */
+.prev-callout{background:rgba(29,158,117,.06);border:1px solid rgba(29,158,117,.2);border-radius:var(--rs);padding:10px 12px;margin-bottom:.75rem}
+.prev-callout-hd{font-size:11px;font-weight:700;color:var(--teal-dk);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.prev-row{font-size:13px;color:var(--txt2);padding:5px 0;border-bottom:1px solid rgba(29,158,117,.1);line-height:1.4}
+.prev-row:last-child{border-bottom:none;padding-bottom:0}
+.prev-row strong{color:var(--txt);font-weight:600}
+
+/* Collapsible */
+.collaps-hd{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:.1rem 0;user-select:none}
+.collaps-arrow{font-size:12px;color:var(--txt3);transition:transform .2s;margin-left:6px}
+.collaps-arrow.open{transform:rotate(180deg)}
+.collaps-body{overflow:hidden}
+
+/* Record */
+.rec-btn{width:100%;padding:16px;border-radius:var(--r);border:2px solid var(--red);background:transparent;color:var(--red);font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .15s;font-family:inherit;margin-bottom:.5rem}
+.rec-btn.on{background:var(--red);color:#fff}
+.rec-dot{width:10px;height:10px;border-radius:50%;background:currentColor;flex-shrink:0}
+.rec-btn.on .rec-dot{animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.rec-hint{font-size:12px;color:var(--txt3);text-align:center;margin-bottom:.75rem}
+.trans-area{width:100%;min-height:120px;background:var(--bg);border:1px solid var(--bdr);border-radius:var(--rs);padding:12px;font-size:15px;color:var(--txt);font-family:inherit;line-height:1.55;resize:vertical;outline:none}
+.trans-area:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(29,158,117,.1)}
+.trans-area.listening{border-color:var(--red);box-shadow:0 0 0 3px rgba(226,75,74,.1)}
+.no-mic{background:rgba(226,75,74,.07);border:1px solid rgba(226,75,74,.22);border-radius:var(--rs);padding:10px 12px;font-size:13px;color:#963535;margin-top:8px;line-height:1.5;display:none}
+
+/* Generate */
+.btn-gen{width:100%;padding:16px;background:var(--teal);color:#fff;border:none;border-radius:var(--r);font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;margin:.75rem 0;letter-spacing:.01em;transition:background .15s}
+.btn-gen:active{background:var(--teal-dk);transform:scale(.99)}
+.btn-gen:disabled{opacity:.45;cursor:not-allowed}
+.loading-bar{height:3px;background:var(--bdr);border-radius:2px;overflow:hidden;margin:8px 0;display:none}
+.loading-fill{height:100%;background:var(--teal);border-radius:2px;animation:ld 2.5s ease-in-out infinite}
+@keyframes ld{0%{width:5%}80%{width:88%}100%{width:88%}}
+
+/* SOAP */
+.soap-sec{margin-bottom:.75rem}
+.soap-hd{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.sbadge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px}
+.bs{background:#E6F1FB;color:#185FA5}.bo{background:#E1F5EE;color:#0F6E56}.ba{background:#FAEEDA;color:#854F0B}.bp{background:#FBEAF0;color:#993556}
+.soap-lbl{font-size:12px;color:var(--txt2)}
+.soap-ta{width:100%;min-height:78px;background:var(--bg);border:1px solid var(--bdr);border-radius:var(--rs);padding:10px 12px;font-size:14px;color:var(--txt);font-family:inherit;line-height:1.6;resize:vertical;outline:none}
+.soap-ta:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(29,158,117,.1)}
+
+/* Action buttons */
+.act-row{display:flex;gap:8px;margin-top:.75rem}
+.btn-sec{flex:1;padding:13px;background:transparent;border:1px solid var(--bdr);border-radius:var(--rs);font-size:14px;color:var(--txt);cursor:pointer;font-family:inherit;transition:all .15s}
+.btn-sec:active{background:var(--bg)}
+.btn-pri{flex:2;padding:13px;background:var(--teal);color:#fff;border:none;border-radius:var(--rs);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s}
+.btn-pri:active{background:var(--teal-dk)}
+
+/* List items */
+.client-row{background:var(--surf);border-radius:var(--r);border:1px solid var(--bdr);padding:.875rem 1rem;margin-bottom:.5rem;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color .15s}
+.client-row:active{border-color:var(--teal)}
+.av{width:42px;height:42px;border-radius:50%;background:var(--teal-lt);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--teal-dk);flex-shrink:0}
+.ci{flex:1;min-width:0}
+.ci-name{font-size:15px;font-weight:600;color:var(--txt)}
+.ci-sub{font-size:12px;color:var(--txt2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chev{color:var(--txt3);font-size:18px}
+.sess-row{background:var(--surf);border-radius:var(--r);border:1px solid var(--bdr);padding:.875rem 1rem;margin-bottom:.5rem;cursor:pointer;transition:border-color .15s}
+.sess-row:active{border-color:var(--teal)}
+.sess-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px}
+.sess-date{font-size:13px;font-weight:600;color:var(--txt)}
+.sess-stars{font-size:12px;color:var(--amber)}
+.sess-type{font-size:12px;color:var(--txt2)}
+.sess-preview{font-size:13px;color:var(--txt3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}
+
+/* Section header */
+.page-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.page-hd h2{font-size:20px;font-weight:700}
+.page-hd-action{font-size:14px;color:var(--teal);font-weight:600;cursor:pointer;background:none;border:none;font-family:inherit}
+
+/* Back */
+.back-row{display:flex;align-items:center;gap:6px;color:var(--teal);font-size:15px;font-weight:500;cursor:pointer;padding:.5rem 0;margin-bottom:.5rem;background:none;border:none;font-family:inherit}
+
+/* Detail */
+.dl{font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;margin-top:.875rem}
+.dl:first-child{margin-top:0}
+.dv{font-size:14px;color:var(--txt);line-height:1.6}
+
+/* Settings */
+.sett-item{background:var(--surf);border-radius:var(--rs);border:1px solid var(--bdr);padding:.875rem 1rem;margin-bottom:.5rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.sett-lbl{font-size:15px;color:var(--txt)}
+.sett-val{font-size:13px;color:var(--txt2)}
+.sett-action{font-size:14px;color:var(--teal);font-weight:600}
+.sett-danger{color:var(--red)}
+.sett-group-lbl{font-size:12px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em;margin:1.25rem 0 .5rem}
+
+/* Toast */
+#toast{position:fixed;bottom:calc(var(--nh) + 14px);left:50%;transform:translateX(-50%);background:#1A1A1A;color:#fff;font-size:14px;font-weight:500;padding:10px 22px;border-radius:99px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:999;white-space:nowrap}
+#toast.show{opacity:1}
+
+/* Empty */
+.empty{text-align:center;padding:3.5rem 1rem}
+.empty-ico{font-size:42px;margin-bottom:.875rem}
+.empty-t{font-size:16px;font-weight:600;color:var(--txt);margin-bottom:.5rem}
+.empty-s{font-size:14px;color:var(--txt2);line-height:1.5}
+
+/* Divider */
+.divider{height:1px;background:var(--bdr);margin:.75rem 0}
+
+.intake-rec-btn{width:100%;padding:13px;border-radius:var(--rs);border:2px solid var(--teal);background:transparent;color:var(--teal);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s;font-family:inherit;margin-bottom:.5rem}
+.intake-rec-btn.on{background:var(--teal);color:#fff}
+.intake-rec-btn .rec-dot{background:currentColor}
+.intake-hint{font-size:12px;color:var(--txt3);text-align:center;margin-bottom:.75rem;line-height:1.5}
+@media(min-width:600px){
+  body{background:#E8E8E6}
+  .app-bar{width:600px;left:50%;right:auto;transform:translateX(-50%);border-left:1px solid var(--bdr);border-right:1px solid var(--bdr)}
+  .bot-nav{width:600px;left:50%;right:auto;transform:translateX(-50%);border-left:1px solid var(--bdr);border-right:1px solid var(--bdr)}
+  .scroll-area{max-width:600px;margin-left:auto;margin-right:auto}
+  #toast{bottom:calc(var(--nh) + 24px)}
+  .lock-screen{background:var(--navy)}
+}
+</style>
+</head>
+<body>
+
+<!-- SETUP SCREEN -->
+<div id="screen-setup" class="lock-screen">
+  <div class="brand-mark">TB</div>
+  <h1>True Balance SOAP Notes</h1>
+  <p class="sub">Enter your Anthropic API key to enable AI-powered SOAP generation. Get a free key at console.anthropic.com</p>
+  <div class="glass-card">
+    <label>Anthropic API Key</label>
+    <input type="password" id="setup-key" placeholder="sk-ant-..." autocomplete="off" autocorrect="off" spellcheck="false" />
+    <label>Set a PIN (optional — recommended for iPad use)</label>
+    <input type="password" id="setup-pin" placeholder="4-digit PIN" maxlength="4" inputmode="numeric" autocomplete="off" />
+    <button class="btn-full" onclick="completeSetup()">Get Started</button>
+    <p class="key-note">Your API key is stored only on this device. Each SOAP note generation costs roughly $0.01–0.02.</p>
+  </div>
+</div>
+
+<!-- PIN SCREEN -->
+<div id="screen-pin" class="lock-screen hidden">
+  <div class="brand-mark">TB</div>
+  <h1>True Balance</h1>
+  <p class="sub">Enter your PIN to continue</p>
+  <div class="pin-dots">
+    <div class="pin-dot" id="pd0"></div>
+    <div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div>
+    <div class="pin-dot" id="pd3"></div>
+  </div>
+  <div class="pin-grid">
+    <button class="pin-key" onclick="pinKey('1')">1</button>
+    <button class="pin-key" onclick="pinKey('2')">2</button>
+    <button class="pin-key" onclick="pinKey('3')">3</button>
+    <button class="pin-key" onclick="pinKey('4')">4</button>
+    <button class="pin-key" onclick="pinKey('5')">5</button>
+    <button class="pin-key" onclick="pinKey('6')">6</button>
+    <button class="pin-key" onclick="pinKey('7')">7</button>
+    <button class="pin-key" onclick="pinKey('8')">8</button>
+    <button class="pin-key" onclick="pinKey('9')">9</button>
+    <button class="pin-key" onclick="pinKey('')" style="opacity:.3">⌫</button>
+    <button class="pin-key" onclick="pinKey('0')">0</button>
+    <button class="pin-key" onclick="pinKey('del')">⌫</button>
+  </div>
+  <div class="pin-err" id="pin-err"></div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <div class="app-bar">
+    <div class="app-bar-logo">TB</div>
+    <div class="app-bar-title" id="app-bar-title">New Session</div>
+    <button class="app-bar-btn" id="app-bar-action" onclick="appBarAction()" style="display:none"></button>
+  </div>
+  <div class="scroll-area">
+
+    <!-- NEW SESSION PAGE -->
+    <div class="page active" id="page-new">
+
+      <!-- Case type toggle -->
+      <div style="display:flex;gap:0;margin-bottom:.75rem;border-radius:var(--rs);overflow:hidden;border:1px solid var(--bdr)">
+        <button class="case-tab active" id="case-fitness" onclick="setCaseType('fitness')" style="flex:1;padding:11px;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:inherit;background:var(--teal);color:#fff;transition:all .15s">Fitness / Corrective</button>
+        <button class="case-tab" id="case-pediatric" onclick="setCaseType('pediatric')" style="flex:1;padding:11px;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:inherit;background:var(--surf);color:var(--txt2);transition:all .15s">Pediatric / Oral Myofascial</button>
+      </div>
+
+      <!-- Client selector -->
+      <div class="card">
+        <div class="card-hd" id="client-card-label">Client</div>
+        <div class="csel-row" style="margin-bottom:.75rem">
+          <div class="field">
+            <label id="client-sel-label">Select client</label>
+            <select class="fi" id="ns-client-sel" onchange="onClientSelect()">
+              <option value="">— Choose or create —</option>
+            </select>
+          </div>
+          <button class="btn-add-client" onclick="showNewClientFields()">+ New</button>
+        </div>
+        <div id="ns-new-client-fields" style="display:none">
+          <div class="field" id="fitness-name-field">
+            <label>Client name</label>
+            <input type="text" class="fi" id="ns-new-name" placeholder="First Last" autocorrect="off" />
+          </div>
+          <!-- Pediatric extra fields -->
+          <div id="pediatric-client-fields" style="display:none">
+            <div class="row2" style="margin-bottom:.75rem">
+              <div class="field">
+                <label>Infant name</label>
+                <input type="text" class="fi" id="ns-infant-name" placeholder="First Last" autocorrect="off" />
+              </div>
+              <div class="field">
+                <label>Date of birth</label>
+                <input type="date" class="fi" id="ns-infant-dob" />
+              </div>
+            </div>
+            <div class="row2">
+              <div class="field">
+                <label>Parent / guardian name</label>
+                <input type="text" class="fi" id="ns-parent-name" placeholder="First Last" autocorrect="off" />
+              </div>
+              <div class="field">
+                <label>Feeding method</label>
+                <select class="fi" id="ns-feeding-method">
+                  <option>Breastfeeding</option>
+                  <option>Bottle (pumped)</option>
+                  <option>Formula</option>
+                  <option>Mixed breast/bottle</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Previous sessions callout (shown for returning clients) -->
+      <div class="prev-callout" id="ns-prev-callout" style="display:none">
+        <div class="prev-callout-hd">Previous sessions</div>
+        <div id="ns-prev-list"></div>
+      </div>
+
+      <!-- Client history (collapsible) -->
+      <div class="card" id="ns-history-card">
+        <div class="collaps-hd" onclick="toggleHistory()">
+          <div class="card-hd" style="margin:0">Client History</div>
+          <span class="collaps-arrow" id="hist-arrow">▼</span>
+        </div>
+        <div id="intake-controls" style="display:none;padding-top:.75rem;border-top:1px solid var(--bdr);margin-top:.75rem">
+          <button class="intake-rec-btn" id="intake-rec-btn" onclick="toggleIntakeRecord()">
+            <div class="rec-dot"></div>
+            <span id="intake-rec-label">Record Intake Conversation</span>
+          </button>
+          <div class="intake-hint" id="intake-hint">Tap record and conduct your intake naturally. Ask questions, let the client respond. Hit Stop, then Extract.</div>
+          <div id="intake-transcript-wrap" style="display:none">
+            <textarea class="trans-area" id="intake-transcript" style="min-height:80px;margin-bottom:.5rem;font-size:13px" placeholder="Intake transcript appears here..." readonly></textarea>
+            <div style="display:flex;gap:8px">
+              <button class="btn-sec" onclick="clearIntake()" style="flex:1;font-size:13px;padding:10px">Clear</button>
+              <button class="btn-pri" id="btn-extract" onclick="extractHistory()" style="flex:2;font-size:13px;padding:10px">Extract History Fields</button>
+            </div>
+          </div>
+          <div class="loading-bar" id="extract-loading"><div class="loading-fill"></div></div>
+        </div>
+        <div class="collaps-body" id="hist-body" style="max-height:0">
+          <div style="padding-top:.75rem">
+            <div class="row2" style="margin-bottom:.75rem">
+              <div class="field">
+                <label>Medical / injury history</label>
+                <textarea class="fi" id="ns-h-med" rows="3" placeholder="Surgeries, diagnoses, joint replacements, chronic conditions…"></textarea>
+              </div>
+              <div class="field">
+                <label>Postural / movement findings</label>
+                <textarea class="fi" id="ns-h-post" rows="3" placeholder="APT, LCS, UCS, scoliosis, leg length…"></textarea>
+              </div>
+            </div>
+            <div class="row2">
+              <div class="field">
+                <label>Current corrective focus</label>
+                <textarea class="fi" id="ns-h-corr" rows="2" placeholder="Active Release→Lengthen→Activate targets…"></textarea>
+              </div>
+              <div class="field">
+                <label>Precautions / medications</label>
+                <textarea class="fi" id="ns-h-prec" rows="2" placeholder="Load limits, restricted movements, StretchZone notes…"></textarea>
+              </div>
+            </div>
+            <div class="field" style="margin-top:.75rem">
+              <label>Goals</label>
+              <input type="text" class="fi" id="ns-h-goals" placeholder="e.g. fat loss, pain-free movement, athletic performance" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PEDIATRIC HISTORY CARD -->
+      <div class="card" id="ns-ped-history-card" style="display:none">
+        <div class="collaps-hd" onclick="togglePedHistory()">
+          <div class="card-hd" style="margin:0">Clinical History</div>
+          <span class="collaps-arrow" id="ped-hist-arrow">▼</span>
+        </div>
+        <div id="ped-intake-controls" style="display:none;padding-top:.75rem;border-top:1px solid var(--bdr);margin-top:.75rem">
+          <button class="intake-rec-btn" id="ped-intake-rec-btn" onclick="togglePedIntakeRecord()">
+            <div class="rec-dot"></div>
+            <span id="ped-intake-rec-label">Record Intake Conversation</span>
+          </button>
+          <div class="intake-hint" id="ped-intake-hint">Tap record during your intake with the parent. Speak naturally — ask about birth, feeding, and symptoms. Hit Stop, then Extract.</div>
+          <div id="ped-intake-wrap" style="display:none">
+            <textarea class="trans-area" id="ped-intake-transcript" style="min-height:80px;margin-bottom:.5rem;font-size:13px" placeholder="Intake transcript appears here..." readonly></textarea>
+            <div style="display:flex;gap:8px">
+              <button class="btn-sec" onclick="clearPedIntake()" style="flex:1;font-size:13px;padding:10px">Clear</button>
+              <button class="btn-pri" id="btn-ped-extract" onclick="extractPedHistory()" style="flex:2;font-size:13px;padding:10px">Extract History Fields</button>
+            </div>
+          </div>
+          <div class="loading-bar" id="ped-extract-loading"><div class="loading-fill"></div></div>
+        </div>
+        <div class="collaps-body" id="ped-hist-body" style="max-height:0">
+          <div style="padding-top:.75rem">
+            <div class="row2" style="margin-bottom:.75rem">
+              <div class="field">
+                <label>Birth history</label>
+                <textarea class="fi" id="ped-h-birth" rows="3" placeholder="Gestational age, vaginal/C-section, forceps/vacuum use, NICU stay, jaundice, interventions at birth..."></textarea>
+              </div>
+              <div class="field">
+                <label>Feeding history</label>
+                <textarea class="fi" id="ped-h-feeding" rows="3" placeholder="Latch description, feeding duration/frequency, weight gain, nipple pain or damage, shield use, reflux, gassiness..."></textarea>
+              </div>
+            </div>
+            <div class="row2" style="margin-bottom:.75rem">
+              <div class="field">
+                <label>Oral visual assessment</label>
+                <textarea class="fi" id="ped-h-oral" rows="3" placeholder="Tongue mobility, elevation, lateralization, lip tie visibility, buccal ties, palate shape (high/narrow/normal), oral symmetry..."></textarea>
+              </div>
+              <div class="field">
+                <label>Palpation findings</label>
+                <textarea class="fi" id="ped-h-palp" rows="3" placeholder="Tissue tension, restriction location (anterior/posterior tongue, floor of mouth, buccal, lips), tissue quality, response to touch..."></textarea>
+              </div>
+            </div>
+            <div class="row2" style="margin-bottom:.75rem">
+              <div class="field">
+                <label>Referral network</label>
+                <textarea class="fi" id="ped-h-ref" rows="2" placeholder="IBCLC, ENT/surgeon, pediatric dentist, chiropractor, SLP, pediatric PT..."></textarea>
+              </div>
+              <div class="field">
+                <label>Precautions / stage</label>
+                <textarea class="fi" id="ped-h-prec" rows="2" placeholder="Corrected age if premature, post-frenectomy timing, healing stage, active infections, contraindications..."></textarea>
+              </div>
+            </div>
+            <div class="field">
+              <label>Parent goals / concerns</label>
+              <input type="text" class="fi" id="ped-h-goals" placeholder="e.g. pain-free breastfeeding, improved latch, weight gain, reduce colic symptoms..." />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Session info -->
+      <div class="card">
+        <div class="card-hd">Session Info</div>
+        <div class="row2" style="margin-bottom:.75rem">
+          <div class="field">
+            <label>Date</label>
+            <input type="date" class="fi" id="ns-date" />
+          </div>
+          <div class="field">
+            <label>Session type</label>
+            <select class="fi" id="ns-type">
+              <option>Follow-up training</option>
+              <option>Initial assessment</option>
+              <option>Corrective exercise</option>
+              <option>Re-assessment</option>
+              <option>Nutrition consult</option>
+              <option>Progress check</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Session rating</label>
+          <div class="star-row">
+            <span class="star" data-v="1" onclick="setRating(1)">★</span>
+            <span class="star" data-v="2" onclick="setRating(2)">★</span>
+            <span class="star" data-v="3" onclick="setRating(3)">★</span>
+            <span class="star" data-v="4" onclick="setRating(4)">★</span>
+            <span class="star" data-v="5" onclick="setRating(5)">★</span>
+            <span class="star-lbl" id="ns-star-lbl">Not rated</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transcript -->
+      <div class="card">
+        <div class="card-hd">Session Notes / Transcript</div>
+        <button class="rec-btn" id="rec-btn" onclick="toggleRecord()">
+          <div class="rec-dot"></div>
+          <span id="rec-label">Start Recording</span>
+        </button>
+        <div class="rec-hint" id="rec-hint">Tap record and talk through the session — or type notes below. You can start and stop as many times as needed.</div>
+        <textarea class="trans-area" id="ns-transcript" placeholder="Type notes here, or use the record button above. Describe what the client said, what you observed, exercises performed, cues given, and your next-session thoughts…"></textarea>
+        <div class="no-mic" id="no-mic">Voice recording requires Chrome or Edge. You can type session notes manually above.</div>
+      </div>
+
+      <!-- Generate -->
+      <button class="btn-gen" id="btn-gen" onclick="generateSOAP()">Generate SOAP Note</button>
+
+      <!-- SOAP output -->
+      <div id="soap-out" style="display:none">
+        <div class="card">
+          <div class="card-hd" id="soap-client-lbl">SOAP Note</div>
+          <div class="loading-bar" id="loading-bar"><div class="loading-fill"></div></div>
+          <div class="soap-sec">
+            <div class="soap-hd"><span class="sbadge bs">S</span><span class="soap-lbl">Subjective — client-reported</span></div>
+            <textarea class="soap-ta" id="soap-s" rows="3"></textarea>
+          </div>
+          <div class="soap-sec">
+            <div class="soap-hd"><span class="sbadge bo">O</span><span class="soap-lbl">Objective — observed / measured</span></div>
+            <textarea class="soap-ta" id="soap-o" rows="3"></textarea>
+          </div>
+          <div class="soap-sec">
+            <div class="soap-hd"><span class="sbadge ba">A</span><span class="soap-lbl">Assessment — clinical analysis</span></div>
+            <textarea class="soap-ta" id="soap-a" rows="3"></textarea>
+          </div>
+          <div class="soap-sec">
+            <div class="soap-hd"><span class="sbadge bp">P</span><span class="soap-lbl">Plan — next session / action items</span></div>
+            <textarea class="soap-ta" id="soap-p" rows="3"></textarea>
+          </div>
+          <div class="act-row">
+            <button class="btn-sec" onclick="copyNote()">Copy</button>
+            <button class="btn-sec" onclick="printNote()">Print</button>
+            <button class="btn-pri" onclick="saveNote()">Save Note</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /page-new -->
+
+    <!-- CLIENTS PAGE -->
+    <div class="page" id="page-clients">
+      <div class="page-hd">
+        <h2>Clients</h2>
+        <button class="page-hd-action" onclick="startNewClient()">+ Add Client</button>
+      </div>
+      <div id="client-list-container"></div>
+    </div>
+
+    <!-- CLIENT DETAIL PAGE -->
+    <div class="page" id="page-client-detail">
+      <button class="back-row" onclick="goBack('page-clients','Clients')">‹ Clients</button>
+      <div id="client-detail-content"></div>
+    </div>
+
+    <!-- SESSION DETAIL PAGE -->
+    <div class="page" id="page-session-detail">
+      <button class="back-row" id="sess-detail-back" onclick="sessionDetailBack()">‹ Back</button>
+      <div id="session-detail-content"></div>
+    </div>
+
+    <!-- SETTINGS PAGE -->
+    <div class="page" id="page-settings">
+      <div class="page-hd"><h2>Settings</h2></div>
+
+      <div class="sett-group-lbl">Account</div>
+      <div class="sett-item" onclick="changeApiKey()">
+        <span class="sett-lbl">API Key</span>
+        <span class="sett-action">Update ›</span>
+      </div>
+      <div class="sett-item" onclick="changePIN()">
+        <span class="sett-lbl">PIN Lock</span>
+        <span id="pin-status" class="sett-val"></span>
+      </div>
+
+      <div class="sett-group-lbl">Data</div>
+      <div class="sett-item" onclick="exportData()">
+        <span class="sett-lbl">Export All Notes</span>
+        <span class="sett-action">Export ›</span>
+      </div>
+      <div class="sett-item" onclick="clearAllData()">
+        <span class="sett-lbl sett-danger">Clear All Data</span>
+        <span class="sett-action sett-danger">›</span>
+      </div>
+
+      <div class="sett-group-lbl">About</div>
+      <div class="sett-item">
+        <span class="sett-lbl">True Balance Fitness</span>
+        <span class="sett-val">SOAP Notes v2.0</span>
+      </div>
+      <div class="sett-item">
+        <span class="sett-lbl">Gulfport, MS &nbsp;·&nbsp; 228-229-6865</span>
+      </div>
+    </div>
+
+  </div><!-- /scroll-area -->
+
+  <nav class="bot-nav">
+    <button class="nav-tab active" id="tab-new" onclick="switchTab('new')">
+      <div class="nav-ico">✦</div>
+      <div class="nav-lbl">New</div>
+    </button>
+    <button class="nav-tab" id="tab-clients" onclick="switchTab('clients')">
+      <div class="nav-ico">♟</div>
+      <div class="nav-lbl">Clients</div>
+    </button>
+    <button class="nav-tab" id="tab-settings" onclick="switchTab('settings')">
+      <div class="nav-ico">⚙</div>
+      <div class="nav-lbl">Settings</div>
+    </button>
+  </nav>
+</div><!-- /app -->
+
+<div id="toast"></div>
+
+<script>
+// ── STORAGE ──────────────────────────────────────────────
+const S = {
+  get: k => { try { return JSON.parse(localStorage.getItem(k)) } catch { return null } },
+  set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
+  del: k => localStorage.removeItem(k)
+}
+const KEY_API  = 'tbf_api'
+const KEY_PIN  = 'tbf_pin'
+const KEY_CLI  = 'tbf_clients'
+const KEY_SESS = 'tbf_sessions'
+
+function getClients() { return S.get(KEY_CLI) || [] }
+function getSessions() { return S.get(KEY_SESS) || [] }
+function saveClients(c) { S.set(KEY_CLI, c) }
+function saveSessions(s) { S.set(KEY_SESS, s) }
+
+// ── APP STATE ─────────────────────────────────────────────
+let rating = 0
+let recognition = null
+let isRecording = false
+let fullTranscript = ''
+let currentClientId = null
+let sessionDetailBackPage = 'page-clients'
+let currentDetailClientId = null
+const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition
+
+// ── INIT ─────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  document.getElementById('ns-date').value = new Date().toISOString().split('T')[0]
+  const apiKey = S.get(KEY_API)
+  if (!apiKey) { show('screen-setup'); return }
+  const pin = S.get(KEY_PIN)
+  if (pin) { show('screen-pin'); return }
+  launchApp()
+})
+
+function show(id) {
+  document.querySelectorAll('.lock-screen').forEach(el => el.classList.add('hidden'))
+  const el = document.getElementById(id)
+  if (el) { el.classList.remove('hidden') }
+}
+
+// ── SETUP ─────────────────────────────────────────────────
+function completeSetup() {
+  const key = document.getElementById('setup-key').value.trim()
+  const pin = document.getElementById('setup-pin').value.trim()
+  if (!key) { alert('Please enter your API key.'); return }
+  S.set(KEY_API, key)
+  if (pin && pin.length === 4 && /^\d{4}$/.test(pin)) S.set(KEY_PIN, pin)
+  launchApp()
+}
+
+// ── PIN ───────────────────────────────────────────────────
+let pinEntry = ''
+function pinKey(v) {
+  if (v === 'del') { pinEntry = pinEntry.slice(0,-1) }
+  else if (pinEntry.length < 4) { pinEntry += v }
+  updatePinDots()
+  if (pinEntry.length === 4) checkPin()
+}
+function updatePinDots() {
+  for (let i=0;i<4;i++) document.getElementById('pd'+i).classList.toggle('filled', i < pinEntry.length)
+}
+function checkPin() {
+  const stored = S.get(KEY_PIN)
+  if (pinEntry === stored) { pinEntry=''; updatePinDots(); launchApp() }
+  else {
+    document.getElementById('pin-err').textContent = 'Incorrect PIN. Try again.'
+    setTimeout(()=>{ pinEntry=''; updatePinDots(); document.getElementById('pin-err').textContent='' }, 1200)
+  }
+}
+
+// ── LAUNCH ────────────────────────────────────────────────
+function launchApp() {
+  document.querySelectorAll('.lock-screen').forEach(el=>el.classList.add('hidden'))
+  const app = document.getElementById('app')
+  app.style.display = 'flex'
+  app.classList.add('active')
+  populateClientSelect()
+  updatePinStatus()
+  if (!SpeechRec) document.getElementById('no-mic').style.display = 'block'
+}
+
+// ── NAV ───────────────────────────────────────────────────
+function switchTab(t) {
+  ['new','clients','settings'].forEach(name => {
+    document.getElementById('tab-'+name).classList.toggle('active', name===t)
+  })
+  const pageMap = { new:'page-new', clients:'page-clients', settings:'page-settings' }
+  showPage(pageMap[t])
+  const titles = { new:'New Session', clients:'Clients', settings:'Settings' }
+  document.getElementById('app-bar-title').textContent = titles[t]
+  document.getElementById('app-bar-action').style.display = 'none'
+  if (t === 'clients') renderClientList()
+}
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
+  document.getElementById(id).classList.add('active')
+}
+
+function goBack(pageId, title) {
+  showPage(pageId)
+  document.getElementById('app-bar-title').textContent = title
+  document.getElementById('app-bar-action').style.display = 'none'
+  if (pageId === 'page-clients') renderClientList()
+}
+
+function appBarAction() {}
+
+// ── CLIENT SELECT (New Session) ───────────────────────────
+function populateClientSelect() {
+  const sel = document.getElementById('ns-client-sel')
+  const clients = getClients().sort((a,b)=>a.name.localeCompare(b.name))
+  sel.innerHTML = '<option value="">— Choose or create —</option>'
+  clients.forEach(c => {
+    const o = document.createElement('option')
+    o.value = c.id; o.textContent = c.name; sel.appendChild(o)
+  })
+}
+
+function onClientSelect() {
+  const sel = document.getElementById('ns-client-sel')
+  const cid = sel.value
+  document.getElementById('ns-new-client-fields').style.display = 'none'
+  if (!cid) { clearHistoryFields(); hidePrevCallout(); currentClientId=null; return }
+  currentClientId = cid
+  const client = getClients().find(c=>c.id==cid)
+  if (!client) return
+  // Fill history
+  document.getElementById('ns-h-med').value   = client.history?.medical    || ''
+  document.getElementById('ns-h-post').value  = client.history?.postural   || ''
+  document.getElementById('ns-h-corr').value  = client.history?.corrective || ''
+  document.getElementById('ns-h-prec').value  = client.history?.precautions|| ''
+  document.getElementById('ns-h-goals').value = client.goals               || ''
+  openHistory()
+  // Show previous sessions
+  const sessions = getSessions().filter(s=>s.clientId==cid).sort((a,b)=>new Date(b.date)-new Date(a.date))
+  if (sessions.length) {
+    const callout = document.getElementById('ns-prev-callout')
+    callout.style.display = 'block'
+    const list = document.getElementById('ns-prev-list')
+    list.innerHTML = sessions.slice(0,3).map(s=>`
+      <div class="prev-row">
+        <strong>${s.date}</strong> &nbsp;·&nbsp; ${s.type}${s.rating ? ' &nbsp;·&nbsp; '+'★'.repeat(s.rating) : ''}<br>
+        <span style="font-size:12px"><em>Plan:</em> ${(s.soap?.P||'').substring(0,120)}${s.soap?.P?.length>120?'…':''}</span>
+      </div>`).join('')
+  } else hidePrevCallout()
+}
+
+function showNewClientFields() {
+  document.getElementById('ns-client-sel').value = ''
+  document.getElementById('ns-new-client-fields').style.display = 'block'
+  document.getElementById('ns-new-name').focus()
+  clearHistoryFields()
+  hidePrevCallout()
+  currentClientId = null
+  openHistory()
+}
+
+function clearHistoryFields() {
+  ['ns-h-med','ns-h-post','ns-h-corr','ns-h-prec','ns-h-goals'].forEach(id=>document.getElementById(id).value='')
+}
+function hidePrevCallout() { document.getElementById('ns-prev-callout').style.display='none' }
+
+// ── COLLAPSIBLE HISTORY ───────────────────────────────────
+let histOpen = false
+function toggleHistory() {
+  histOpen = !histOpen
+  const body = document.getElementById('hist-body')
+  const arrow = document.getElementById('hist-arrow')
+  const intake = document.getElementById('intake-controls')
+  body.style.maxHeight = histOpen ? body.scrollHeight + 600 + 'px' : '0'
+  arrow.classList.toggle('open', histOpen)
+  intake.style.display = histOpen ? 'block' : 'none'
+}
+function openHistory() {
+  histOpen = true
+  const body = document.getElementById('hist-body')
+  body.style.maxHeight = body.scrollHeight + 600 + 'px'
+  document.getElementById('hist-arrow').classList.add('open')
+  document.getElementById('intake-controls').style.display = 'block'
+}
+
+// ── CASE TYPE ────────────────────────────────────────────
+let caseType = 'fitness'
+const fitnessSessionTypes = ['Follow-up training','Initial assessment','Corrective exercise','Re-assessment','Nutrition consult','Progress check']
+const pedSessionTypes = ['Oral Myofascial Assessment','TOT Evaluation','Post-Frenectomy Follow-up','Breastfeeding Support Session','Pediatric Soft Tissue','Craniosacral / Myofascial','Re-assessment','Progress Check']
+
+function setCaseType(type) {
+  caseType = type
+  var isFit = type === 'fitness'
+  // Toggle buttons
+  document.getElementById('case-fitness').style.background = isFit ? 'var(--teal)' : 'var(--surf)'
+  document.getElementById('case-fitness').style.color = isFit ? '#fff' : 'var(--txt2)'
+  document.getElementById('case-pediatric').style.background = !isFit ? 'var(--teal)' : 'var(--surf)'
+  document.getElementById('case-pediatric').style.color = !isFit ? '#fff' : 'var(--txt2)'
+  // Show/hide history cards
+  document.getElementById('ns-history-card').style.display = isFit ? 'block' : 'none'
+  document.getElementById('ns-ped-history-card').style.display = !isFit ? 'block' : 'none'
+  // Toggle client fields
+  document.getElementById('fitness-name-field').style.display = isFit ? 'block' : 'none'
+  document.getElementById('pediatric-client-fields').style.display = !isFit ? 'block' : 'none'
+  document.getElementById('client-card-label').textContent = isFit ? 'Client' : 'Infant & Parent'
+  document.getElementById('client-sel-label').textContent = isFit ? 'Select client' : 'Select patient'
+  // Swap session types
+  var sel = document.getElementById('ns-type')
+  var types = isFit ? fitnessSessionTypes : pedSessionTypes
+  sel.innerHTML = types.map(function(t){ return '<option>' + t + '</option>' }).join('')
+}
+
+// ── PED HISTORY COLLAPSIBLE ───────────────────────────────
+var pedHistOpen = false
+function togglePedHistory() {
+  pedHistOpen = !pedHistOpen
+  var body = document.getElementById('ped-hist-body')
+  var arrow = document.getElementById('ped-hist-arrow')
+  var intake = document.getElementById('ped-intake-controls')
+  body.style.maxHeight = pedHistOpen ? body.scrollHeight + 600 + 'px' : '0'
+  arrow.classList.toggle('open', pedHistOpen)
+  intake.style.display = pedHistOpen ? 'block' : 'none'
+}
+function openPedHistory() {
+  pedHistOpen = true
+  var body = document.getElementById('ped-hist-body')
+  body.style.maxHeight = body.scrollHeight + 600 + 'px'
+  document.getElementById('ped-hist-arrow').classList.add('open')
+  document.getElementById('ped-intake-controls').style.display = 'block'
+}
+
+// ── PED INTAKE RECORDING ──────────────────────────────────
+var pedIntakeRecognition = null
+var pedIntakeRecording = false
+var pedIntakeTranscript = ''
+
+function togglePedIntakeRecord() {
+  if (!SpeechRec) { document.getElementById('no-mic').style.display='block'; return }
+  pedIntakeRecording ? stopPedIntakeRecord() : startPedIntakeRecord()
+}
+function startPedIntakeRecord() {
+  pedIntakeRecognition = new SpeechRec()
+  pedIntakeRecognition.continuous = false
+  pedIntakeRecognition.interimResults = true
+  pedIntakeRecognition.lang = 'en-US'
+  pedIntakeTranscript = document.getElementById('ped-intake-transcript').value
+  pedIntakeRecognition.onresult = function(e) {
+    var final = '', interim = ''
+    for (var i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript + ' '
+      else interim += e.results[i][0].transcript
+    }
+    pedIntakeTranscript += final
+    document.getElementById('ped-intake-transcript').value = pedIntakeTranscript + interim
+    document.getElementById('ped-intake-wrap').style.display = 'block'
+  }
+  pedIntakeRecognition.onerror = function(e) { if (e.error !== 'no-speech' && e.error !== 'aborted') showRecError('Microphone error: ' + e.error) }
+  pedIntakeRecognition.onend = function() {
+    if (pedIntakeRecording) {
+      setTimeout(function() { try { pedIntakeRecognition.start() } catch(e) {} }, 150)
+    }
+  }
+  pedIntakeRecognition.start()
+  pedIntakeRecording = true
+  document.getElementById('ped-intake-rec-btn').classList.add('on')
+  document.getElementById('ped-intake-rec-label').textContent = 'Stop Recording'
+  document.getElementById('ped-intake-hint').textContent = 'Listening... ask the parent about birth, feeding, symptoms. Tap Stop when done.'
+  document.getElementById('ped-intake-wrap').style.display = 'block'
+}
+function stopPedIntakeRecord() {
+  if (pedIntakeRecognition) { pedIntakeRecognition.onend=null; pedIntakeRecognition.stop(); pedIntakeRecognition=null }
+  pedIntakeRecording = false
+  pedIntakeTranscript = document.getElementById('ped-intake-transcript').value
+  document.getElementById('ped-intake-rec-btn').classList.remove('on')
+  document.getElementById('ped-intake-rec-label').textContent = 'Record Intake Conversation'
+  document.getElementById('ped-intake-hint').textContent = 'Tap record again to add more, or tap Extract History Fields below.'
+}
+function clearPedIntake() {
+  if (pedIntakeRecording) stopPedIntakeRecord()
+  document.getElementById('ped-intake-transcript').value = ''
+  document.getElementById('ped-intake-wrap').style.display = 'none'
+  pedIntakeTranscript = ''
+}
+
+async function extractPedHistory() {
+  var transcript = document.getElementById('ped-intake-transcript').value.trim()
+  if (!transcript) { alert('Record an intake conversation first.'); return }
+  var btn = document.getElementById('btn-ped-extract')
+  btn.disabled = true; btn.textContent = 'Extracting...'
+  document.getElementById('ped-extract-loading').style.display = 'block'
+
+  var prompt = 'You are a clinical intake assistant for a massage therapist specializing in infant and pediatric oral myofascial work including tongue ties, lip ties, buccal ties, and breastfeeding support.\n\nBelow is a raw intake conversation between the therapist and a parent. Extract only the clinically relevant information.\n\nTranscript:\n"""\n' + transcript + '\n"""\n\nReturn ONLY a valid JSON object with exactly these keys:\n- "birth": Birth history - gestational age, delivery type (vaginal/C-section), use of forceps or vacuum, NICU stay, jaundice, any interventions at birth\n- "feeding": Feeding history - breast/bottle/mixed, latch quality, feeding duration and frequency, weight gain trajectory, nipple pain or damage for mother, use of nipple shield, reflux or gassiness\n- "oral": Oral visual findings - tongue mobility, elevation and lateralization, lip tie appearance, buccal ties, palate shape, oral symmetry, any clicking or breaking suction\n- "palpation": Palpation findings - tissue tension locations, restriction pattern, tissue quality and health, infant response to touch\n- "referrals": Current or recommended referral network - IBCLC, ENT, pediatric dentist, chiropractor, SLP, PT\n- "precautions": Precautions - corrected age if premature, post-frenectomy stage and timing, active infections, contraindications\n- "goals": Parent goals and concerns - pain-free nursing, improved latch, weight gain, colic relief, etc.\n\nIf a field has no relevant info return empty string. Be concise and clinical from a massage therapy perspective. Return ONLY the JSON, no markdown.'
+
+  try {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': S.get(KEY_API), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 900, messages: [{ role:'user', content: prompt }] })
+    })
+    var data = await res.json()
+    if (data.error) throw new Error(data.error.message)
+    var raw = (data.content||[]).map(function(b){ return b.text||'' }).join('').replace(/```json|```/g,'').trim()
+    var ex = JSON.parse(raw)
+    var fields = [
+      { id:'ped-h-birth',   key:'birth' },
+      { id:'ped-h-feeding', key:'feeding' },
+      { id:'ped-h-oral',    key:'oral' },
+      { id:'ped-h-palp',    key:'palpation' },
+      { id:'ped-h-ref',     key:'referrals' },
+      { id:'ped-h-prec',    key:'precautions' },
+      { id:'ped-h-goals',   key:'goals' }
+    ]
+    fields.forEach(function(f) {
+      var el = document.getElementById(f.id)
+      var existing = el.value.trim()
+      var val = (ex[f.key]||'').trim()
+      if (val) el.value = existing ? existing + '\n' + val : val
+    })
+    var body = document.getElementById('ped-hist-body')
+    body.style.maxHeight = body.scrollHeight + 600 + 'px'
+    showToast('History fields populated!')
+  } catch(err) {
+    alert('Extraction failed. Check your API key in Settings or try again.')
+    console.error(err)
+  }
+  document.getElementById('ped-extract-loading').style.display = 'none'
+  btn.disabled = false; btn.textContent = 'Extract History Fields'
+}
+
+// ── RATING ────────────────────────────────────────────────
+function setRating(v) {
+  rating = v
+  const lbls = ['','1 — Poor','2 — Fair','3 — Good','4 — Great','5 — Excellent']
+  document.getElementById('ns-star-lbl').textContent = lbls[v]
+  document.querySelectorAll('.star').forEach(s=>s.classList.toggle('lit', parseInt(s.dataset.v)<=v))
+}
+
+// ── RECORDING ─────────────────────────────────────────────
+function toggleRecord() {
+  if (!SpeechRec) {
+    showRecError('Voice recording is not supported in this browser. On iPhone/iPad use Safari. On desktop use Chrome or Edge.')
+    return
+  }
+  isRecording ? stopRecording() : startRecording()
+}
+
+function startRecording() {
+  try {
+    recognition = new SpeechRec()
+  } catch(e) {
+    showRecError('Speech recognition could not start. Try Chrome or Edge on desktop, or check microphone permissions.')
+    return
+  }
+  // iOS Safari does not support continuous=true reliably — use false and restart on end
+  recognition.continuous = false
+  recognition.interimResults = true
+  recognition.lang = 'en-US'
+  recognition.maxAlternatives = 1
+  fullTranscript = document.getElementById('ns-transcript').value
+
+  recognition.onstart = function() {
+    document.getElementById('no-mic').style.display = 'none'
+  }
+
+  recognition.onresult = function(e) {
+    var final = '', interim = ''
+    for (var i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript + ' '
+      else interim += e.results[i][0].transcript
+    }
+    fullTranscript += final
+    document.getElementById('ns-transcript').value = fullTranscript + interim
+  }
+
+  recognition.onerror = function(e) {
+    var msg = {
+      'not-allowed':  'Microphone access was denied. Go to Settings > Safari > Microphone and allow access for this site, then try again.',
+      'no-speech':    '',
+      'audio-capture':'No microphone found. Make sure your microphone is connected.',
+      'network':      'Network error during speech recognition. Check your connection.',
+      'aborted':      ''
+    }[e.error] || ('Speech error: ' + e.error)
+    if (msg) showRecError(msg)
+    if (e.error === 'not-allowed' || e.error === 'audio-capture') {
+      isRecording = false
+      document.getElementById('rec-btn').classList.remove('on')
+      document.getElementById('rec-label').textContent = 'Start Recording'
+    }
+  }
+
+  recognition.onend = function() {
+    // On iOS, recognition stops after each pause — restart automatically if still recording
+    if (isRecording) {
+      try {
+        recognition.start()
+      } catch(e) {
+        // Brief delay before restart to handle iOS timing
+        setTimeout(function() {
+          if (isRecording) {
+            try { recognition.start() } catch(e2) {}
+          }
+        }, 150)
+      }
+    }
+  }
+
+  try {
+    recognition.start()
+  } catch(e) {
+    showRecError('Could not start microphone. Make sure no other app is using it.')
+    return
+  }
+
+  isRecording = true
+  document.getElementById('rec-btn').classList.add('on')
+  document.getElementById('rec-label').textContent = 'Stop Recording'
+  document.getElementById('rec-hint').textContent = 'Listening... speak naturally. Tap Stop when done.'
+  document.getElementById('ns-transcript').classList.add('listening')
+}
+
+function showRecError(msg) {
+  var el = document.getElementById('no-mic')
+  el.textContent = msg
+  el.style.display = 'block'
+}
+
+function stopRecording() {
+  if (recognition) {
+    recognition.onend = null
+    recognition.onerror = null
+    try { recognition.stop() } catch(e) {}
+    recognition = null
+  }
+  isRecording = false
+  fullTranscript = document.getElementById('ns-transcript').value
+  document.getElementById('rec-btn').classList.remove('on')
+  document.getElementById('rec-label').textContent = 'Start Recording'
+  document.getElementById('rec-hint').textContent = 'Tap record again to continue adding to this session.'
+  document.getElementById('ns-transcript').classList.remove('listening')
+}
+
+// ── GENERATE SOAP ─────────────────────────────────────────
+async function generateSOAP() {
+  const notes = document.getElementById('ns-transcript').value.trim()
+  if (!notes) { alert('Please record or type session notes first.'); return }
+  if (isRecording) stopRecording()
+
+  // Build pediatric context if needed
+  if (caseType === 'pediatric') { await generatePedSOAP(); return }
+  const clientSel = document.getElementById('ns-client-sel').value
+  const newName   = document.getElementById('ns-new-name').value.trim()
+  const clientName = clientSel
+    ? (getClients().find(c=>c.id==clientSel)?.name || 'Client')
+    : (newName || 'Client')
+
+  const date  = document.getElementById('ns-date').value
+  const type  = document.getElementById('ns-type').value
+  const goals = document.getElementById('ns-h-goals').value
+  const hMed  = document.getElementById('ns-h-med').value
+  const hPost = document.getElementById('ns-h-post').value
+  const hCorr = document.getElementById('ns-h-corr').value
+  const hPrec = document.getElementById('ns-h-prec').value
+
+  // Get previous sessions for context
+  const prevSessions = clientSel
+    ? getSessions().filter(s=>s.clientId==clientSel).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,3)
+    : []
+
+  const prevContext = prevSessions.length
+    ? '\n\nPREVIOUS SESSIONS (for clinical continuity — reference progress, changes, and carryover):\n' +
+      prevSessions.map(s=>`[${s.date} — ${s.type}]\nS: ${s.soap?.S||''}\nO: ${s.soap?.O||''}\nA: ${s.soap?.A||''}\nP: ${s.soap?.P||''}`).join('\n\n')
+    : ''
+
+  const historyBlock = [
+    hMed  && `Medical/injury history: ${hMed}`,
+    hPost && `Postural/movement findings: ${hPost}`,
+    hCorr && `Current corrective focus: ${hCorr}`,
+    hPrec && `Precautions/medications: ${hPrec}`,
+    goals && `Client goals: ${goals}`
+  ].filter(Boolean).join('\n')
+
+  const prompt = `You are a clinical documentation assistant for True Balance Fitness, a corrective exercise and personal training studio using Brookbush Institute Release→Lengthen→Activate→Integrate methodology.
+
+Client: ${clientName}
+Date: ${date}
+Session type: ${type}
+${historyBlock ? 'Client profile:\n' + historyBlock : ''}${prevContext}
+
+Today's raw session notes:
+"""
+${notes}
+"""
+
+Generate a professional SOAP note. If previous sessions are provided, reference progress, changes from last session, and plan follow-through in your Assessment.
+
+Return ONLY a valid JSON object with exactly these four string keys: "subjective", "objective", "assessment", "plan"
+- subjective: what the client reported (pain, energy, mood, feedback, life context, response to last session homework)
+- objective: observed/measured findings (movement quality, ROM, compensation patterns, exercises with sets/reps/load if mentioned, postural findings, goniometric data if noted)
+- assessment: clinical interpretation — progress vs last session if applicable, dysfunctions addressed, corrective sequencing response, goal alignment
+- plan: next session focus, homework, progressions/regressions, referral considerations, re-assessment timeline
+
+Be concise, professional, clinically precise. Return ONLY the JSON object, no markdown fences, no preamble.`
+
+  const btn = document.getElementById('btn-gen')
+  btn.disabled = true; btn.textContent = 'Generating…'
+  document.getElementById('soap-out').style.display = 'block'
+  document.getElementById('soap-client-lbl').textContent = clientName + ' — ' + date
+  document.getElementById('loading-bar').style.display = 'block'
+  ;['soap-s','soap-o','soap-a','soap-p'].forEach(id=>document.getElementById(id).value='')
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': S.get(KEY_API), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1200, messages: [{ role:'user', content: prompt }] })
+    })
+    const data = await res.json()
+    if (data.error) throw new Error(data.error.message)
+    const raw  = (data.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim()
+    const soap = JSON.parse(raw)
+    document.getElementById('soap-s').value = soap.subjective || ''
+    document.getElementById('soap-o').value = soap.objective  || ''
+    document.getElementById('soap-a').value = soap.assessment || ''
+    document.getElementById('soap-p').value = soap.plan       || ''
+  } catch(err) {
+    ['soap-s','soap-o','soap-a','soap-p'].forEach(id=>document.getElementById(id).value='(Generation error — check your API key in Settings, or type directly)')
+    console.error(err)
+  }
+  document.getElementById('loading-bar').style.display = 'none'
+  btn.disabled = false; btn.textContent = 'Regenerate SOAP Note'
+  // Scroll to SOAP
+  document.getElementById('soap-out').scrollIntoView({ behavior:'smooth', block:'start' })
+}
+
+// ── SAVE NOTE ─────────────────────────────────────────────
+function saveNote() {
+  const clientSel = document.getElementById('ns-client-sel').value
+  const newName   = document.getElementById('ns-new-name').value.trim()
+  if (!clientSel && !newName) { alert('Please select or name a client before saving.'); return }
+  if (!document.getElementById('soap-s').value.trim()) { alert('Generate a SOAP note before saving.'); return }
+
+  let clients = getClients()
+  let clientId = clientSel ? parseInt(clientSel) : null
+
+  // Resolve name for pediatric
+  if (!newName && caseType === 'pediatric') {
+    var inf = document.getElementById('ns-infant-name').value.trim()
+    var par = document.getElementById('ns-parent-name').value.trim()
+    newName = inf ? inf + (par ? ' / ' + par : '') : par || 'Patient'
+  }
+
+  // Create new client if needed
+  if (!clientId) {
+    const newClient = {
+      id: Date.now(),
+      name: newName,
+      goals: document.getElementById('ns-h-goals').value,
+      history: {
+        medical:     document.getElementById('ns-h-med').value,
+        postural:    document.getElementById('ns-h-post').value,
+        corrective:  document.getElementById('ns-h-corr').value,
+        precautions: document.getElementById('ns-h-prec').value
+      },
+      createdAt: new Date().toISOString()
+    }
+    clients.push(newClient)
+    saveClients(clients)
+    clientId = newClient.id
+  } else {
+    // Update existing client's history with any edits
+    const idx = clients.findIndex(c=>c.id==clientId)
+    if (idx >= 0) {
+      clients[idx].goals = document.getElementById('ns-h-goals').value
+      clients[idx].history = {
+        medical:     document.getElementById('ns-h-med').value,
+        postural:    document.getElementById('ns-h-post').value,
+        corrective:  document.getElementById('ns-h-corr').value,
+        precautions: document.getElementById('ns-h-prec').value
+      }
+      saveClients(clients)
+    }
+  }
+
+  const clientName = clients.find(c=>c.id==clientId)?.name || 'Client'
+  const session = {
+    id: Date.now() + Math.floor(Math.random()*1000),
+    clientId,
+    clientName,
+    date:   document.getElementById('ns-date').value,
+    type:   document.getElementById('ns-type').value,
+    rating,
+    caseType,
+    transcript: document.getElementById('ns-transcript').value,
+    soap: {
+      S: document.getElementById('soap-s').value,
+      O: document.getElementById('soap-o').value,
+      A: document.getElementById('soap-a').value,
+      P: document.getElementById('soap-p').value
+    },
+    savedAt: new Date().toISOString()
+  }
+
+  const sessions = getSessions()
+  sessions.unshift(session)
+  saveSessions(sessions)
+  populateClientSelect()
+  showToast('Note saved for ' + clientName)
+}
+
+// ── RESET NEW SESSION ─────────────────────────────────────
+function resetNewSession() {
+  if (isRecording) stopRecording()
+  document.getElementById('ns-client-sel').value = ''
+  document.getElementById('ns-new-client-fields').style.display = 'none'
+  document.getElementById('ns-new-name').value = ''
+  document.getElementById('ns-date').value = new Date().toISOString().split('T')[0]
+  document.getElementById('ns-type').value = 'Follow-up training'
+  document.getElementById('ns-transcript').value = ''
+  fullTranscript = ''; rating = 0
+  document.getElementById('ns-star-lbl').textContent = 'Not rated'
+  document.querySelectorAll('.star').forEach(s=>s.classList.remove('lit'))
+  clearHistoryFields(); hidePrevCallout()
+  document.getElementById('soap-out').style.display = 'none'
+  document.getElementById('btn-gen').textContent = 'Generate SOAP Note'
+  currentClientId = null
+  histOpen = false
+  document.getElementById('hist-body').style.maxHeight = '0'
+  document.getElementById('hist-arrow').classList.remove('open')
+  document.getElementById('rec-hint').textContent = 'Tap record and talk through the session — or type notes below. You can start and stop as many times as needed.'
+  showToast('Session cleared')
+}
+
+// ── CLIENTS LIST ──────────────────────────────────────────
+function renderClientList() {
+  const clients = getClients().sort((a,b)=>a.name.localeCompare(b.name))
+  const sessions = getSessions()
+  const el = document.getElementById('client-list-container')
+  if (!clients.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-ico">👤</div><div class="empty-t">No clients yet</div><div class="empty-s">Save your first SOAP note on the New tab and your client will appear here.</div></div>`
+    return
+  }
+  el.innerHTML = clients.map(c => {
+    const count = sessions.filter(s=>s.clientId==c.id).length
+    const last  = sessions.filter(s=>s.clientId==c.id).sort((a,b)=>new Date(b.date)-new Date(a.date))[0]
+    const initials = c.name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase()
+    return `<div class="client-row" onclick="openClientDetail(${c.id})">
+      <div class="av">${initials}</div>
+      <div class="ci">
+        <div class="ci-name">${c.name}</div>
+        <div class="ci-sub">${count} session${count!==1?'s':''} · Last: ${last ? last.date : 'none'}</div>
+      </div>
+      <div class="chev">›</div>
+    </div>`
+  }).join('')
+}
+
+function startNewClient() {
+  switchTab('new')
+  setTimeout(showNewClientFields, 100)
+}
+
+// ── CLIENT DETAIL ─────────────────────────────────────────
+function openClientDetail(clientId) {
+  const clients = getClients()
+  const sessions = getSessions()
+  const client = clients.find(c=>c.id==clientId)
+  if (!client) return
+  currentDetailClientId = clientId
+  const clientSessions = sessions.filter(s=>s.clientId==clientId).sort((a,b)=>new Date(b.date)-new Date(a.date))
+
+  const initials = client.name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase()
+  const stars = r => r ? '★'.repeat(r)+'☆'.repeat(5-r) : '—'
+
+  let html = `
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:1.25rem">
+      <div class="av" style="width:52px;height:52px;font-size:18px">${initials}</div>
+      <div>
+        <div style="font-size:20px;font-weight:700">${client.name}</div>
+        <div style="font-size:13px;color:var(--txt2)">${clientSessions.length} session${clientSessions.length!==1?'s':''}</div>
+      </div>
+    </div>`
+
+  if (client.goals || client.history?.medical || client.history?.postural) {
+    html += `<div class="card" style="margin-bottom:.75rem">
+      <div class="card-hd">Client Profile</div>`
+    if (client.goals)             html += `<div class="dl">Goals</div><div class="dv">${client.goals}</div>`
+    if (client.history?.medical)  html += `<div class="dl">Medical / injury</div><div class="dv">${client.history.medical}</div>`
+    if (client.history?.postural) html += `<div class="dl">Postural findings</div><div class="dv">${client.history.postural}</div>`
+    if (client.history?.corrective) html += `<div class="dl">Corrective focus</div><div class="dv">${client.history.corrective}</div>`
+    if (client.history?.precautions) html += `<div class="dl">Precautions</div><div class="dv">${client.history.precautions}</div>`
+    html += `</div>`
+  }
+
+  html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+    <div style="font-size:16px;font-weight:700">Session History</div>
+    <button onclick="startSessionForClient(${client.id})" style="background:var(--teal);color:#fff;border:none;border-radius:var(--rs);padding:8px 14px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">+ New Session</button>
+  </div>`
+
+  if (!clientSessions.length) {
+    html += `<div class="empty" style="padding:2rem 1rem"><div class="empty-t">No sessions yet</div><div class="empty-s">Tap New Session above to document this client's first session.</div></div>`
+  } else {
+    html += clientSessions.map(s=>`
+      <div class="sess-row" onclick="openSessionDetail(${s.id}, 'page-client-detail')">
+        <div class="sess-top">
+          <span class="sess-date">${s.date}</span>
+          <span class="sess-stars">${stars(s.rating)}</span>
+        </div>
+        <div class="sess-type">${s.type}${s.caseType==='pediatric' ? ' &nbsp;<span style=\"font-size:11px;background:#E1F5EE;color:#0F6E56;padding:1px 6px;border-radius:4px;font-weight:600\">Peds</span>' : ''}</div>
+        <div class="sess-preview">${(s.soap?.S||'').substring(0,100)}</div>
+      </div>`).join('')
+  }
+
+  document.getElementById('client-detail-content').innerHTML = html
+  showPage('page-client-detail')
+  document.getElementById('app-bar-title').textContent = client.name
+}
+
+// ── SESSION DETAIL ────────────────────────────────────────
+function openSessionDetail(sessionId, backPage) {
+  sessionDetailBackPage = backPage
+  const session = getSessions().find(s=>s.id==sessionId)
+  if (!session) return
+  const stars = r => r ? '★'.repeat(r)+'☆'.repeat(5-r) : 'Not rated'
+  const html = `
+    <div style="margin-bottom:1rem">
+      <div style="font-size:18px;font-weight:700;margin-bottom:4px">${session.clientName}</div>
+      <div style="font-size:13px;color:var(--txt2)">${session.date} · ${session.type} · ${stars(session.rating)}</div>
+    </div>
+    <div class="card">
+      <div class="soap-sec">
+        <div class="soap-hd"><span class="sbadge bs">S</span><span class="soap-lbl">Subjective</span></div>
+        <div class="dv">${(session.soap?.S||'').replace(/\n/g,'<br>')}</div>
+      </div>
+      <div class="divider"></div>
+      <div class="soap-sec">
+        <div class="soap-hd"><span class="sbadge bo">O</span><span class="soap-lbl">Objective</span></div>
+        <div class="dv">${(session.soap?.O||'').replace(/\n/g,'<br>')}</div>
+      </div>
+      <div class="divider"></div>
+      <div class="soap-sec">
+        <div class="soap-hd"><span class="sbadge ba">A</span><span class="soap-lbl">Assessment</span></div>
+        <div class="dv">${(session.soap?.A||'').replace(/\n/g,'<br>')}</div>
+      </div>
+      <div class="divider"></div>
+      <div class="soap-sec">
+        <div class="soap-hd"><span class="sbadge bp">P</span><span class="soap-lbl">Plan</span></div>
+        <div class="dv">${(session.soap?.P||'').replace(/\n/g,'<br>')}</div>
+      </div>
+      <div class="act-row" style="margin-top:1rem">
+        <button class="btn-sec" onclick="copySessionNote(${sessionId})">Copy</button>
+        <button class="btn-sec" onclick="printSessionNote(${sessionId})">Print</button>
+        <button class="btn-sec sett-danger" onclick="deleteSession(${sessionId})">Delete</button>
+      </div>
+    </div>`
+  document.getElementById('session-detail-content').innerHTML = html
+  showPage('page-session-detail')
+  document.getElementById('app-bar-title').textContent = session.date
+}
+
+function sessionDetailBack() {
+  if (sessionDetailBackPage === 'page-client-detail' && currentDetailClientId) {
+    openClientDetail(currentDetailClientId)
+  } else {
+    goBack('page-clients', 'Clients')
+  }
+}
+
+// ── START SESSION FOR EXISTING CLIENT ─────────────────────
+function startSessionForClient(clientId) {
+  switchTab('new')
+  setTimeout(() => {
+    const sel = document.getElementById('ns-client-sel')
+    sel.value = clientId
+    onClientSelect()
+    document.getElementById('ns-transcript').focus()
+  }, 150)
+}
+
+// ── COPY / PRINT ──────────────────────────────────────────
+function copyNote() {
+  const client = document.getElementById('soap-client-lbl').textContent
+  const stars = r => r ? '★'.repeat(r) : 'Not rated'
+  const text = `SOAP NOTE — True Balance Fitness\nClient: ${client} | Rating: ${stars(rating)}\n\nSUBJECTIVE:\n${document.getElementById('soap-s').value}\n\nOBJECTIVE:\n${document.getElementById('soap-o').value}\n\nASSESSMENT:\n${document.getElementById('soap-a').value}\n\nPLAN:\n${document.getElementById('soap-p').value}`
+  navigator.clipboard.writeText(text).then(()=>showToast('Copied to clipboard'))
+}
+
+function printNote() {
+  buildPrintWindow(
+    document.getElementById('soap-client-lbl').textContent,
+    document.getElementById('ns-type').value,
+    rating,
+    document.getElementById('soap-s').value,
+    document.getElementById('soap-o').value,
+    document.getElementById('soap-a').value,
+    document.getElementById('soap-p').value
+  )
+}
+
+function copySessionNote(id) {
+  const s = getSessions().find(s=>s.id==id)
+  if (!s) return
+  const stars = r => r ? '★'.repeat(r) : 'Not rated'
+  const text = `SOAP NOTE — True Balance Fitness\nClient: ${s.clientName} | ${s.date} | ${s.type} | Rating: ${stars(s.rating)}\n\nSUBJECTIVE:\n${s.soap?.S||''}\n\nOBJECTIVE:\n${s.soap?.O||''}\n\nASSESSMENT:\n${s.soap?.A||''}\n\nPLAN:\n${s.soap?.P||''}`
+  navigator.clipboard.writeText(text).then(()=>showToast('Copied to clipboard'))
+}
+
+function printSessionNote(id) {
+  const s = getSessions().find(s=>s.id==id)
+  if (!s) return
+  buildPrintWindow(`${s.clientName} — ${s.date}`, s.type, s.rating, s.soap?.S, s.soap?.O, s.soap?.A, s.soap?.P)
+}
+
+function buildPrintWindow(header, type, r, S, O, A, P) {
+  const stars = r ? '★'.repeat(r)+'☆'.repeat(5-r) : 'Not rated'
+  const w = window.open('','_blank')
+  w.document.write(`<!DOCTYPE html><html><head><title>SOAP Note — ${header}</title><style>
+    body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#1a1a1a;font-size:14px;line-height:1.75}
+    h1{font-size:20px;font-weight:700;margin:0 0 4px}
+    .meta{color:#555;font-size:12px;border-bottom:1px solid #ddd;padding-bottom:14px;margin-bottom:20px}
+    .badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px;margin-right:6px}
+    .bs{background:#E6F1FB;color:#185FA5}.bo{background:#E1F5EE;color:#0F6E56}.ba{background:#FAEEDA;color:#854F0B}.bp{background:#FBEAF0;color:#993556}
+    .sec{margin-bottom:20px}
+    .sec-body{margin-top:6px;font-size:14px;line-height:1.7}
+    @media print{body{margin:20px}}
+  </style></head><body>
+    <h1>True Balance Fitness — SOAP Note</h1>
+    <div class="meta">${header} &nbsp;·&nbsp; ${type} &nbsp;·&nbsp; ${stars}</div>
+    <div class="sec"><span class="badge bs">S</span><strong>Subjective</strong><div class="sec-body">${(S||'').replace(/\n/g,'<br>')}</div></div>
+    <div class="sec"><span class="badge bo">O</span><strong>Objective</strong><div class="sec-body">${(O||'').replace(/\n/g,'<br>')}</div></div>
+    <div class="sec"><span class="badge ba">A</span><strong>Assessment</strong><div class="sec-body">${(A||'').replace(/\n/g,'<br>')}</div></div>
+    <div class="sec"><span class="badge bp">P</span><strong>Plan</strong><div class="sec-body">${(P||'').replace(/\n/g,'<br>')}</div></div>
+  </body></html>`)
+  w.document.close(); w.print()
+}
+
+// ── DELETE SESSION ────────────────────────────────────────
+function deleteSession(id) {
+  if (!confirm('Delete this session note? This cannot be undone.')) return
+  saveSessions(getSessions().filter(s=>s.id!=id))
+  showToast('Session deleted')
+  sessionDetailBack()
+}
+
+// ── SETTINGS ──────────────────────────────────────────────
+function updatePinStatus() {
+  const el = document.getElementById('pin-status')
+  el.textContent = S.get(KEY_PIN) ? 'Enabled · Change ›' : 'Not set · Enable ›'
+}
+
+function changeApiKey() {
+  const k = prompt('Enter new Anthropic API key:', '')
+  if (k && k.trim()) { S.set(KEY_API, k.trim()); showToast('API key updated') }
+}
+
+function changePIN() {
+  const action = S.get(KEY_PIN) ? 'change or remove' : 'set'
+  const p = prompt(`Enter new 4-digit PIN (leave blank to ${S.get(KEY_PIN)?'remove':'skip'}):`, '')
+  if (p === null) return
+  if (p === '') { S.del(KEY_PIN); showToast('PIN removed'); updatePinStatus(); return }
+  if (!/^\d{4}$/.test(p)) { alert('PIN must be exactly 4 digits.'); return }
+  S.set(KEY_PIN, p); showToast('PIN updated'); updatePinStatus()
+}
+
+function exportData() {
+  const data = {
+    exported: new Date().toISOString(),
+    clients: getClients(),
+    sessions: getSessions()
+  }
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'})
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = 'tbf-soap-notes-' + new Date().toISOString().split('T')[0] + '.json'
+  a.click()
+  showToast('Data exported')
+}
+
+function clearAllData() {
+  if (!confirm('This will permanently delete ALL clients and session notes. Are you sure?')) return
+  if (!confirm('Last chance — this cannot be undone. Delete everything?')) return
+  saveClients([]); saveSessions([])
+  populateClientSelect(); renderClientList()
+  showToast('All data cleared')
+}
+
+// ── INTAKE RECORDING ─────────────────────────────────────
+let intakeRecognition = null
+let intakeRecording = false
+let intakeTranscript = ''
+
+function toggleIntakeRecord() {
+  if (!SpeechRec) { document.getElementById('no-mic').style.display='block'; return }
+  intakeRecording ? stopIntakeRecord() : startIntakeRecord()
+}
+
+function startIntakeRecord() {
+  intakeRecognition = new SpeechRec()
+  intakeRecognition.continuous = false
+  intakeRecognition.interimResults = true
+  intakeRecognition.lang = 'en-US'
+  intakeTranscript = document.getElementById('intake-transcript').value
+  intakeRecognition.onresult = function(e) {
+    var final = '', interim = ''
+    for (var i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript + ' '
+      else interim += e.results[i][0].transcript
+    }
+    intakeTranscript += final
+    document.getElementById('intake-transcript').value = intakeTranscript + interim
+    document.getElementById('intake-transcript-wrap').style.display = 'block'
+  }
+  intakeRecognition.onerror = function(e) { if (e.error !== 'no-speech' && e.error !== 'aborted') showRecError('Microphone error: ' + e.error) }
+  intakeRecognition.onend = function() {
+    if (intakeRecording) {
+      setTimeout(function() { try { intakeRecognition.start() } catch(e) {} }, 150)
+    }
+  }
+  intakeRecognition.start()
+  intakeRecording = true
+  document.getElementById('intake-rec-btn').classList.add('on')
+  document.getElementById('intake-rec-label').textContent = 'Stop Recording'
+  document.getElementById('intake-hint').textContent = 'Listening... speak naturally with your client. Tap Stop when done, then Extract.'
+  document.getElementById('intake-transcript-wrap').style.display = 'block'
+}
+
+function stopIntakeRecord() {
+  if (intakeRecognition) { intakeRecognition.onend=null; intakeRecognition.stop(); intakeRecognition=null }
+  intakeRecording = false
+  intakeTranscript = document.getElementById('intake-transcript').value
+  document.getElementById('intake-rec-btn').classList.remove('on')
+  document.getElementById('intake-rec-label').textContent = 'Record Intake Conversation'
+  document.getElementById('intake-hint').textContent = 'Tap record again to add more, or tap Extract History Fields below.'
+}
+
+function clearIntake() {
+  if (intakeRecording) stopIntakeRecord()
+  document.getElementById('intake-transcript').value = ''
+  document.getElementById('intake-transcript-wrap').style.display = 'none'
+  intakeTranscript = ''
+  document.getElementById('intake-hint').textContent = 'Tap record and conduct your intake naturally. Ask questions, let the client respond. Hit Stop, then Extract.'
+}
+
+async function extractHistory() {
+  var transcript = document.getElementById('intake-transcript').value.trim()
+  if (!transcript) { alert('Record an intake conversation first.'); return }
+  var btn = document.getElementById('btn-extract')
+  btn.disabled = true; btn.textContent = 'Extracting...'
+  document.getElementById('extract-loading').style.display = 'block'
+
+  var prompt = 'You are a clinical intake assistant for True Balance Fitness, a corrective exercise studio using Brookbush Institute methodology.\n\nBelow is a raw intake conversation transcript between a trainer and client. Both voices are mixed. Extract only the clinically relevant information.\n\nTranscript:\n"""\n' + transcript + '\n"""\n\nReturn ONLY a valid JSON object with exactly these five string keys:\n- "medical": Medical history, injuries, surgeries, diagnoses, chronic conditions, joint replacements, neurological issues\n- "postural": Postural findings, movement dysfunctions, imbalances, asymmetries (APT, LCS, UCS, scoliosis, leg length, etc.)\n- "corrective": Current corrective focus, Release/Lengthen/Activate/Integrate priorities, patterns to address\n- "precautions": Load restrictions, contraindicated movements, physician restrictions, pain triggers, StretchZone notes\n- "goals": What the client wants to achieve - performance, pain relief, aesthetics, function, event-specific\n\nIf a field has no relevant info, return empty string. Be concise and clinical. Return ONLY the JSON, no markdown.'
+
+  try {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': S.get(KEY_API), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 800, messages: [{ role:'user', content: prompt }] })
+    })
+    var data = await res.json()
+    if (data.error) throw new Error(data.error.message)
+    var raw = (data.content||[]).map(function(b){ return b.text||'' }).join('').replace(/```json|```/g,'').trim()
+    var extracted = JSON.parse(raw)
+    var fields = [
+      { id:'ns-h-med',   key:'medical' },
+      { id:'ns-h-post',  key:'postural' },
+      { id:'ns-h-corr',  key:'corrective' },
+      { id:'ns-h-prec',  key:'precautions' },
+      { id:'ns-h-goals', key:'goals' }
+    ]
+    fields.forEach(function(f) {
+      var el = document.getElementById(f.id)
+      var existing = el.value.trim()
+      var val = (extracted[f.key]||'').trim()
+      if (val) el.value = existing ? existing + '\n' + val : val
+    })
+    var body = document.getElementById('hist-body')
+    body.style.maxHeight = body.scrollHeight + 600 + 'px'
+    showToast('History fields populated!')
+  } catch(err) {
+    alert('Extraction failed. Check your API key in Settings or try again.')
+    console.error(err)
+  }
+  document.getElementById('extract-loading').style.display = 'none'
+  btn.disabled = false; btn.textContent = 'Extract History Fields'
+}
+
+// ── TOAST ─────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast')
+  t.textContent = msg; t.classList.add('show')
+  setTimeout(()=>t.classList.remove('show'), 2500)
+}
+</script>
+</body>
+</html>
