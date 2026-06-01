@@ -530,7 +530,11 @@ textarea.fi{resize:vertical;line-height:1.55;min-height:78px}
       <div class="sett-group-lbl">Account</div>
       <div class="sett-item" onclick="changeApiKey()">
         <span class="sett-lbl">API Key</span>
-        <span class="sett-action">Update ›</span>
+        <span class="sett-action" id="api-key-preview">Update ›</span>
+      </div>
+      <div class="sett-item" onclick="testApiKey()">
+        <span class="sett-lbl">Test API Key</span>
+        <span class="sett-action" id="test-key-result">Run test ›</span>
       </div>
       <div class="sett-item" onclick="changePIN()">
         <span class="sett-lbl">PIN Lock</span>
@@ -1440,6 +1444,13 @@ function deleteSession(id) {
 function updatePinStatus() {
   const el = document.getElementById('pin-status')
   el.textContent = S.get(KEY_PIN) ? 'Enabled · Change ›' : 'Not set · Enable ›'
+  // Show key preview
+  var key = S.get(KEY_API) || ''
+  var preview = document.getElementById('api-key-preview')
+  if (preview) {
+    if (!key) { preview.textContent = 'Not set — tap to add'; preview.style.color = 'var(--red)' }
+    else { preview.textContent = key.substring(0,10) + '...' + key.slice(-4); preview.style.color = 'var(--txt3)' }
+  }
 }
 
 function changeApiKey() {
@@ -1450,7 +1461,7 @@ function changeApiKey() {
     function() {
       var k = document.getElementById('modal-input').value.trim()
       if (!k) { showToast('Please enter a valid API key'); return false }
-      S.set(KEY_API, k); showToast('API key saved!'); return true
+      var cleanKey = k.replace(/\s+/g,''); S.set(KEY_API, cleanKey); showToast('API key saved — run Test to verify'); return true
     }
   )
   setTimeout(function(){ var el=document.getElementById('modal-input'); if(el) el.focus() }, 250)
@@ -1595,6 +1606,57 @@ async function extractHistory() {
 }
 
 // ── TOAST ─────────────────────────────────────────────────
+async function testApiKey() {
+  var key = S.get(KEY_API) || ''
+  var resultEl = document.getElementById('test-key-result')
+  if (!key) { resultEl.textContent = 'No key saved!'; resultEl.style.color = 'var(--red)'; return }
+  resultEl.textContent = 'Testing...'
+  resultEl.style.color = 'var(--txt3)'
+  try {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 10,
+        messages: [{ role: 'user', content: 'Say OK' }]
+      })
+    })
+    var data = await res.json()
+    if (data.error) {
+      resultEl.textContent = 'Error: ' + data.error.message
+      resultEl.style.color = 'var(--red)'
+      openModal('API Key Error', 
+        '<p style="font-size:14px;color:var(--txt);line-height:1.6;margin-bottom:1rem"><strong>Error type:</strong> ' + data.error.type + '</p>' +
+        '<p style="font-size:14px;color:var(--txt);line-height:1.6;margin-bottom:1rem"><strong>Message:</strong> ' + data.error.message + '</p>' +
+        '<p style="font-size:13px;color:var(--txt2);line-height:1.6">Common fixes:<br>• Copy a fresh key from console.anthropic.com/settings/keys<br>• Make sure you have billing credit at console.anthropic.com/billing<br>• The key should start with <strong>sk-ant-</strong></p>',
+        function(){ return true }
+      )
+      document.querySelector("#settings-modal div div:last-child button:last-child").textContent = 'OK'
+    } else if (data.content) {
+      resultEl.textContent = 'Key works!'
+      resultEl.style.color = 'var(--teal)'
+      showToast('API key is working correctly')
+    } else {
+      resultEl.textContent = 'Unexpected response'
+      resultEl.style.color = 'var(--amber)'
+    }
+  } catch(err) {
+    resultEl.textContent = 'Network error'
+    resultEl.style.color = 'var(--red)'
+    openModal('Connection Error',
+      '<p style="font-size:14px;color:var(--txt);line-height:1.6">Could not reach the Anthropic API.<br><br><strong>Error:</strong> ' + (err.message||err) + '<br><br>Make sure you have an internet connection and try again.</p>',
+      function(){ return true }
+    )
+    document.querySelector("#settings-modal div div:last-child button:last-child").textContent = 'OK'
+  }
+}
+
 var _modalConfirmFn = null
 function openModal(title, bodyHtml, onConfirm) {
   document.getElementById('modal-title').textContent = title
